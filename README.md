@@ -35,7 +35,6 @@ This is the main interface of the entering app
 This is the first rock-paper-scissor interface.
 
 <img width="460" height="619" alt="Screenshot_20250802_081926" src="https://github.com/user-attachments/assets/00f30af0-4b90-4876-8ba6-0bd584e71c92" />
-me)
 This is the second game tic-tac-toe
 
 <img width="465" height="639" alt="Screenshot_20250802_081943" src="https://github.com/user-attachments/assets/eb992388-073d-4b1d-a8cd-da700b610d5e" />
