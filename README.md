@@ -44,15 +44,11 @@ This is the third game flappy bird*
 ### Project Demo
 # Video
 [Screencast_20250802_083136.webm](https://github.com/user-attachments/assets/5eafbb9b-5fd3-49ba-86c0-b8c17aa46bfe)
-This shows our whole app but since
-
-# Additional Demos
-[Add any extra demo materials/links]
+This shows our whole app but since we couldnt record audio it couldnt show win, lose, tie audios.
 
 ## Team Contributions
-- [Name 1]: [Specific contributions]
-- [Name 2]: [Specific contributions]
-- [Name 3]: [Specific contributions]
+- Amir: Coding
+- Athul : Design and Implementation
 
 ---
 Made with ❤️ at TinkerHub Useless Projects 
