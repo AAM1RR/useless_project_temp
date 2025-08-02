@@ -5,84 +5,46 @@
 
 
 ## Basic Details
-### Team Name: [Name]
+### Team Name: DEBUGGER
 
 
 ### Team Members
-- Team Lead: [Name] - [College]
-- Member 2: [Name] - [College]
-- Member 3: [Name] - [College]
+- Member 1: Amir Mohammed - TKMCE
+- Member 2: Athul Krishna - TKMCE 
 
 ### Project Description
-[2-3 lines about what your project does]
+Our project aims to provide a fun and interactive way to play the childhood games we all once played but with a little bit of spice and salt.It contains 3 games which includes ROCK-PAPERS-SCISSOR , TIC-TAC-TOE , FLAPPY BIRD
 
 ### The Problem (that doesn't exist)
-[What ridiculous problem are you solving?]
+Making the game we played once more exciting and twisted utterly useless.
 
 ### The Solution (that nobody asked for)
-[How are you solving it? Keep it fun!]
+We have implemented our own twisted yet crooked ideas to switch up the vibe of the games.
 
 ## Technical Details
 ### Technologies/Components Used
 For Software:
-- [Languages used]
-- [Frameworks used]
-- [Libraries used]
-- [Tools used]
+-  HTML, CSS, JS
+- VSCODE, NETLIFY
 
-For Hardware:
-- [List main components]
-- [List specifications]
-- [List tools required]
+# Screenshots
+<img width="465" height="623" alt="Screenshot_20250802_081910" src="https://github.com/user-attachments/assets/97cdf1ed-324d-4f69-93f1-92a0655581a0" />
+This is the main interface of the entering app
 
-### Implementation
-For Software:
-# Installation
-[commands]
+<img width="457" height="628" alt="Screenshot_20250802_081853" src="https://github.com/user-attachments/assets/b9f99912-8466-4685-96a3-719951e5cb27" />
+This is the first rock-paper-scissor interface.
 
-# Run
-[commands]
+<img width="460" height="619" alt="Screenshot_20250802_081926" src="https://github.com/user-attachments/assets/00f30af0-4b90-4876-8ba6-0bd584e71c92" />
+me)
+This is the second game tic-tac-toe
 
-### Project Documentation
-For Software:
-
-# Screenshots (Add at least 3)
-![Screenshot1](Add screenshot 1 here with proper name)
-*Add caption explaining what this shows*
-
-![Screenshot2](Add screenshot 2 here with proper name)
-*Add caption explaining what this shows*
-
-![Screenshot3](Add screenshot 3 here with proper name)
-*Add caption explaining what this shows*
-
-# Diagrams
-![Workflow](Add your workflow/architecture diagram here)
-*Add caption explaining your workflow*
-
-For Hardware:
-
-# Schematic & Circuit
-![Circuit](Add your circuit diagram here)
-*Add caption explaining connections*
-
-![Schematic](Add your schematic diagram here)
-*Add caption explaining the schematic*
-
-# Build Photos
-![Components](Add photo of your components here)
-*List out all components shown*
-
-![Build](Add photos of build process here)
-*Explain the build steps*
-
-![Final](Add photo of final product here)
-*Explain the final build*
+<img width="465" height="639" alt="Screenshot_20250802_081943" src="https://github.com/user-attachments/assets/eb992388-073d-4b1d-a8cd-da700b610d5e" />
+This is the third game flappy bird*
 
 ### Project Demo
 # Video
-[Add your demo video link here]
-*Explain what the video demonstrates*
+[Screencast_20250802_083136.webm](https://github.com/user-attachments/assets/5eafbb9b-5fd3-49ba-86c0-b8c17aa46bfe)
+This shows our whole app but since
 
 # Additional Demos
 [Add any extra demo materials/links]
