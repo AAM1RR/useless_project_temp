@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Awesome Game Hub</title>
+    <!-- Tailwind CSS and Fonts (Shared by all games) -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+    <!-- TensorFlow.js and Hand Pose Detection (Shared) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection"></script>
+    
+    <style>
+        /* General body styling */
+        body {
+            font-family: 'Bebas Neue', sans-serif;
+            background-color: #000;
+            background-image: radial-gradient(circle, #1a1a1a 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        /* Hub-specific container styling */
+        .hub-container {
+            width: 100%;
+            max-width: 1000px;
+            padding: 3rem;
+            background-color: #121212;
+            border-radius: 1.5rem;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.7);
+            border: 2px solid #ccc;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Game container styling (used when a game is loaded) */
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem; /* Reduced gap for tighter layout */
+            width: 100%;
+            max-width: 1000px;
+            padding: 2rem; /* Reduced padding */
+            background-color: #121212;
+            border-radius: 1.5rem;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.7);
+            border: 2px solid #ccc;
+            animation: fadeIn 1s ease-in-out;
+            flex-grow: 1;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Titles */
+        .hub-title, .game-title {
+            font-size: 4rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: #fff;
+            text-shadow: 2px 2px 5px rgba(255, 255, 255, 0.2);
+            margin-bottom: 2rem;
+        }
+
+        /* Game list layout */
+        .game-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            justify-content: center;
+        }
+
+        /* Individual game card styling */
+        .game-card {
+            background-color: #222;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            text-align: center;
+            width: 250px;
+        }
+
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.7);
+        }
+
+        .game-card h2 {
+            font-size: 2rem;
+            text-transform: uppercase;
+            color: #fff;
+        }
+
+        /* Back button styling */
+        #backButton {
+            margin-top: 2rem;
+            padding: 1rem 2rem;
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            color: #fff;
+            background-color: #555;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            display: none; /* Initially hidden */
+        }
+        
+        /* --- Rock Paper Scissors specific styles --- */
+        .choices-container { display: flex; justify-content: space-around; width: 100%; padding: 1rem 0; }
+        .choice-display { display: flex; flex-direction: column; align-items: center; gap: 1rem; width: 45%; }
+        .choice-label { font-size: 1.8rem; color: #ddd; text-transform: uppercase; letter-spacing: 0.1em; }
+        .choice-result { min-height: 10rem; font-size: 7rem; color: #aaa; display: flex; justify-content: center; align-items: center; text-shadow: 0 0 5px rgba(0, 0, 0, 0.5); transition: all 0.3s ease-out; animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55); }
+        @keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .player-choice, .computer-choice { color: #fff; text-shadow: 2px 2px 4px #444; }
+        .result-message { min-height: 4rem; font-size: 3rem; text-align: center; text-transform: uppercase; letter-spacing: 0.1em; color: #eee; text-shadow: 1px 1px 3px #555; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        .buttons-container { display: flex; gap: 1.5rem; margin-top: 1rem; }
+        .game-button { padding: 1rem 2.5rem; font-size: 1.5rem; font-weight: bold; text-transform: uppercase; color: #fff; background-color: #333; border: 2px solid #555; border-radius: 0.75rem; box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4); cursor: pointer; transition: all 0.3s ease; }
+        .game-button:hover:not(:disabled) { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0, 0, 0, 0.6); background-color: #444; }
+        .game-button:disabled { background-color: #222; color: #666; cursor: not-allowed; box-shadow: none; transform: none; }
+        #muteButton { position: absolute; top: 2rem; right: 2rem; font-size: 1.5rem; color: #fff; background: rgba(0, 0, 0, 0.5); border: 2px solid #fff; border-radius: 50%; width: 3rem; height: 3rem; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s ease-in-out; z-index: 10; }
+        #muteButton:hover { transform: scale(1.1); background: rgba(0, 0, 0, 0.7); }
+        .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 1rem; font-size: 2rem; text-align: center; z-index: 1000; }
+        /* Apply the same hidden style to both webcams */
+        #webcam, #webcamFlappyBird { 
+            position: absolute; 
+            top: -9999px; 
+            left: -9999px; 
+            width: 1px; 
+            height: 1px; 
+            opacity: 0; 
+        }
+        .score-container { display: flex; justify-content: space-around; width: 100%; font-size: 2.2rem; margin-top: 1rem; color: #fff; text-shadow: 1px 1px 3px #555; }
+        .round-counter { font-size: 2rem; color: #ddd; text-align: center; margin-top: 1rem; text-shadow: 1px 1px 2px #333; }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); display: none; justify-content: center; align-items: center; z-index: 1001; }
+        .modal-content { background: #121212; padding: 3rem; border-radius: 1.5rem; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.7); text-align: center; color: #ffffff; font-size: 1.8rem; border: 2px solid #fff; }
+
+        /* --- Tic Tac Toe specific styles --- */
+        #tic-tac-toe-status { font-size: 2.5rem; min-height: 3rem; text-align: center; text-transform: uppercase; letter-spacing: 0.1em; color: #eee; text-shadow: 1px 1px 3px #555; margin-bottom: 1rem; }
+        #tic-tac-toe-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; width: 100%; max-width: 400px; margin: 1rem 0; }
+        .tic-tac-toe-cell { background-color: #2a2a2a; border: 2px solid #444; border-radius: 0.75rem; aspect-ratio: 1 / 1; display: flex; justify-content: center; align-items: center; font-size: 5rem; font-weight: bold; cursor: pointer; transition: background-color 0.3s ease; }
+        .tic-tac-toe-cell:hover { background-color: #3a3a3a; }
+        .tic-tac-toe-cell.x { color: #34D399; }
+        .tic-tac-toe-cell.o { color: #F87171; }
+        #tic-tac-toe-reset-button { margin-top: 1rem; }
+
+        /* --- Flappy Bird specific styles --- */
+        #flappyBirdCanvas {
+            background-color: #70c5ce; /* Sky blue */
+            border: 2px solid #333;
+            border-radius: 0.75rem;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            display: block;
+            margin: 1rem auto;
+            cursor: pointer; /* Indicate it's clickable */
+        }
+        .flappy-bird-controls {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        #flappyBirdScore {
+            font-size: 2.5rem;
+            color: #fff;
+            text-shadow: 2px 2px 4px #000;
+            margin-top: 1rem;
+        }
+        #flappyBirdStatus {
+            font-size: 2rem;
+            color: #eee;
+            text-shadow: 1px 1px 3px #555;
+            min-height: 2.5rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .hub-container, .game-container { padding: 1.5rem; gap: 1rem; }
+            .hub-title, .game-title, h1 { font-size: 2.5rem; letter-spacing: 0.1em; }
+            .choice-label { font-size: 1.5rem; }
+            .choice-result { font-size: 5rem; min-height: 8rem; }
+            .result-message { font-size: 2.5rem; min-height: 3rem; }
+            .game-button { padding: 0.75rem 2rem; font-size: 1.25rem; }
+            .score-container { font-size: 1.8rem; }
+            #muteButton { top: 1rem; right: 1rem; width: 2.5rem; height: 2.5rem; font-size: 1.25rem; }
+            #tic-tac-toe-status { font-size: 1.8rem; }
+            .tic-tac-toe-cell { font-size: 3.5rem; }
+            #flappyBirdScore { font-size: 2rem; }
+            #flappyBirdStatus { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Main container for the hub -->
+    <div class="hub-container" id="mainContainer">
+        <h1 class="hub-title" id="hubTitle">The Game Hub</h1>
+        
+        <div id="gameListContainer" class="game-list">
+            <div class="game-card" data-game-id="rock-paper-scissors">
+                <h2>Rock Paper Scissors</h2>
+                <p class="text-gray-400">Play with your hand gestures!</p>
+            </div>
+            <div class="game-card" data-game-id="tic-tac-toe">
+                <h2>Tic Tac Toe</h2>
+                <p class="text-gray-400">Player 1 (X) places O's. Player 2 (O) places X's. The board swaps randomly!</p>
+            </div>
+            <div class="game-card" data-game-id="flappy-bird">
+                <h2>Flappy Bird</h2>
+                <p class="text-gray-400">Control the bird with your hand movements!</p>
+            </div>
+        </div>
+
+        <div id="gameContentContainer"></div>
+        <button id="backButton">Back to Hub</button>
+    </div>
+
+    <!-- Rock Paper Scissors Template -->
+    <template id="rock-paper-scissors-template">
+        <div class="game-container" id="rpsGameContainer">
+            <h1 class="game-title text-center mb-8">Rock Paper Scissors</h1>
+            <button id="muteButton">🔊</button>
+            <!-- Audio files are placeholders, you'll need to provide actual sound files -->
+            <audio id="winSound" src="song.mp3" preload="auto"></audio>
+            <audio id="loseSound" src="ayyoo.mp3" preload="auto"></audio>
+            <audio id="tieSound" src="sayip.mp3" preload="auto"></audio>
+            <audio id="goSound" src="go.mp3" preload="auto"></audio>
+            <div id="messageModal" class="modal"><div class="modal-content"><p id="modalMessage"></p></div></div>
+            <div id="loadingOverlay" class="loading-overlay"><span>Loading...</span></div>
+            <div class="choices-container">
+                <div class="choice-display"><span class="choice-label">Your Hand</span><span id="playerChoiceDisplay" class="choice-result player-choice">?</span></div>
+                <div class="choice-display"><span class="choice-label">Computer</span><span id="computerChoiceDisplay" class="choice-result computer-choice">?</span></div>
+            </div>
+            <div id="resultMessage" class="result-message">Press START or click/tap the game area!</div>
+            <div class="flex flex-col items-center w-full">
+                <div class="score-container w-full"><span>You: <span id="playerScore">0</span></span><span>Computer: <span id="computerScore">0</span></span></div>
+                <div class="round-counter mt-4">Round <span id="roundCounter">0</span> / 5</div>
+            </div>
+            <video id="webcam" playsinline></video>
+            <div class="buttons-container"><button id="startButton" class="game-button">Start Round</button><button id="resetButton" class="game-button" disabled>Reset Game</button></div>
+        </div>
+    </template>
+
+    <!-- Tic Tac Toe Template -->
+    <template id="tic-tac-toe-template">
+        <div class="game-container" id="tttGameContainer">
+            <h1 class="game-title text-center">Tic Tac Toe</h1>
+            <div id="tic-tac-toe-status">Press START or click/tap the game area!</div>
+            <div id="tic-tac-toe-board">
+                <div class="tic-tac-toe-cell" data-cell-index="0"></div><div class="tic-tac-toe-cell" data-cell-index="1"></div><div class="tic-tac-toe-cell" data-cell-index="2"></div>
+                <div class="tic-tac-toe-cell" data-cell-index="3"></div><div class="tic-tac-toe-cell" data-cell-index="4"></div><div class="tic-tac-toe-cell" data-cell-index="5"></div>
+                <div class="tic-tac-toe-cell" data-cell-index="6"></div><div class="tic-tac-toe-cell" data-cell-index="7"></div><div class="tic-tac-toe-cell" data-cell-index="8"></div>
+            </div>
+            <button id="tic-tac-toe-reset-button" class="game-button">Reset Game</button>
+        </div>
+    </template>
+
+    <!-- Flappy Bird Template -->
+    <template id="flappy-bird-template">
+        <div class="game-container" id="flappyBirdGameContainer">
+            <h1 class="game-title text-center">Flappy Bird</h1>
+            <canvas id="flappyBirdCanvas" width="400" height="600"></canvas>
+            <div id="flappyBirdScore">Score: 0</div>
+            <div id="flappyBirdStatus">Press START or click/tap the game area!</div>
+            <div class="flappy-bird-controls">
+                <button id="flappyBirdStartButton" class="game-button">Start Game</button>
+                <button id="flappyBirdResetButton" class="game-button" disabled>Reset Game</button>
+            </div>
+            <!-- The webcam element is now hidden via CSS, but still present for hand detection -->
+            <video id="webcamFlappyBird" playsinline></video> 
+            <div id="loadingOverlayFlappyBird" class="loading-overlay"><span>Loading AI Model...</span></div>
+        </div>
+    </template>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Hub UI Elements ---
+            const mainContainer = document.getElementById('mainContainer');
+            const hubTitle = document.getElementById('hubTitle');
+            const gameListContainer = document.getElementById('gameListContainer');
+            const gameContentContainer = document.getElementById('gameContentContainer');
+            const backButton = document.getElementById('backButton');
+            let activeGameId = null;
+            
+            // --- Hub Logic ---
+            function loadGame(gameId) {
+                const template = document.getElementById(`${gameId}-template`);
+                if (!template) return;
+                
+                activeGameId = gameId;
+                const gameContent = template.content.cloneNode(true);
+                gameContentContainer.appendChild(gameContent);
+
+                gameListContainer.style.display = 'none';
+                gameContentContainer.style.display = 'block';
+                backButton.style.display = 'block';
+                hubTitle.style.display = 'none';
+                mainContainer.classList.remove('hub-container');
+                mainContainer.classList.add('game-container');
+
+                // Initialize the specific game
+                if (gameId === 'rock-paper-scissors') initRockPaperScissors();
+                if (gameId === 'tic-tac-toe') initTicTacToe();
+                if (gameId === 'flappy-bird') initFlappyBird();
+            }
+
+            function unloadGame() {
+                // Stop any active game processes
+                if (activeGameId === 'rock-paper-scissors' && window.stopRps) {
+                    window.stopRps();
+                }
+                if (activeGameId === 'flappy-bird' && window.stopFlappyBird) {
+                    window.stopFlappyBird();
+                }
+
+                gameContentContainer.innerHTML = ''; // Clear game content
+                
+                // Restore hub UI
+                gameListContainer.style.display = 'flex';
+                gameContentContainer.style.display = 'none';
+                backButton.style.display = 'none';
+                hubTitle.style.display = 'block';
+                mainContainer.classList.add('hub-container');
+                mainContainer.classList.remove('game-container');
+                activeGameId = null;
+            }
+
+            gameListContainer.addEventListener('click', (event) => {
+                const gameCard = event.target.closest('.game-card');
+                if (gameCard) loadGame(gameCard.dataset.gameId);
+            });
+
+            backButton.addEventListener('click', unloadGame);
+
+            // --- Rock Paper Scissors Game Logic ---
+            function initRockPaperScissors() {
+                // --- Get all UI elements ---
+                const rpsGameContainer = document.getElementById('rpsGameContainer'); // Get the container
+                const webcamElement = document.getElementById('webcam');
+                const loadingOverlay = document.getElementById('loadingOverlay');
+                const startButton = document.getElementById('startButton');
+                const resetButton = document.getElementById('resetButton');
+                const playerChoiceDisplay = document.getElementById('playerChoiceDisplay');
+                const computerChoiceDisplay = document.getElementById('computerChoiceDisplay');
+                const resultMessage = document.getElementById('resultMessage');
+                const playerScoreSpan = document.getElementById('playerScore');
+                const computerScoreSpan = document.getElementById('computerScore');
+                const roundCounterSpan = document.getElementById('roundCounter');
+                const muteButton = document.getElementById('muteButton');
+                // Audio files are placeholders, you'll need to provide actual sound files
+                const winSound = document.getElementById('winSound'), loseSound = document.getElementById('loseSound'), tieSound = document.getElementById('tieSound'), goSound = document.getElementById('goSound');
+
+                // --- Game State and Configuration ---
+                const choices = ['Rock', 'Paper', 'Scissors'];
+                const handIcons = { 'Rock': '✊', 'Paper': '✋', 'Scissors': '✌️', 'No Hand': '?' };
+                const MAX_ROUNDS = 5;
+                let detector = null, videoStream = null, lastPlayerChoice = '?';
+                let isRoundActive = false, isMuted = false;
+                let playerScore = 0, computerScore = 0, roundCount = 0;
+                let detectionInterval = null, countdownInterval = null, computerAnimationInterval = null;
+
+                // --- Cleanup function to be called when leaving the game ---
+                window.stopRps = () => {
+                    if (videoStream) videoStream.getTracks().forEach(track => track.stop());
+                    if (detectionInterval) cancelAnimationFrame(detectionInterval);
+                    if (countdownInterval) clearInterval(countdownInterval);
+                    if (computerAnimationInterval) clearInterval(computerAnimationInterval);
+                    console.log("RPS resources released.");
+                };
+                
+                // --- Core Game Functions ---
+
+                function getGesture(landmarks) {
+                    const isFingerExtended = (tipY, knuckleY) => tipY < knuckleY;
+                    const indexFingerExtended = isFingerExtended(landmarks[8].y, landmarks[6].y);
+                    const middleFingerExtended = isFingerExtended(landmarks[12].y, landmarks[10].y);
+                    const ringFingerExtended = isFingerExtended(landmarks[16].y, landmarks[14].y);
+                    const pinkyFingerExtended = isFingerExtended(landmarks[20].y, landmarks[18].y);
+
+                    if (indexFingerExtended && middleFingerExtended && ringFingerExtended && pinkyFingerExtended) return 'Paper';
+                    if (indexFingerExtended && middleFingerExtended && !ringFingerExtended && !pinkyFingerExtended) return 'Scissors';
+                    if (!indexFingerExtended && !middleFingerExtended && !ringFingerExtended && !pinkyFingerExtended) return 'Rock';
+                    return 'No Hand';
+                }
+
+                function playSoundEffect(audioElement) { 
+                    if (!isMuted && audioElement) { 
+                        audioElement.currentTime = 0; 
+                        audioElement.play().catch(e => console.warn("Audio play failed", e)); 
+                    } 
+                }
+                
+                async function detectHand() {
+                    if (!videoStream || !videoStream.active) return;
+                    if (detector) {
+                        const hands = await detector.estimateHands(webcamElement, {flipHorizontal: true});
+                        if (isRoundActive && hands.length > 0) {
+                            const gesture = getGesture(hands[0].keypoints);
+                            playerChoiceDisplay.textContent = handIcons[gesture] || '?';
+                            lastPlayerChoice = gesture;
+                        } else if (isRoundActive) {
+                            playerChoiceDisplay.textContent = handIcons['No Hand'];
+                            lastPlayerChoice = 'No Hand';
+                        }
+                    }
+                    detectionInterval = requestAnimationFrame(detectHand);
+                }
+                
+                function startRound() {
+                    if (isRoundActive || roundCount >= MAX_ROUNDS) return;
+                    isRoundActive = true;
+                    startButton.disabled = true;
+                    resetButton.disabled = true;
+                    resultMessage.textContent = 'Get Ready!';
+
+                    // Start computer choice animation
+                    const emojiChoices = [handIcons.Rock, handIcons.Paper, handIcons.Scissors];
+                    computerAnimationInterval = setInterval(() => {
+                        computerChoiceDisplay.textContent = emojiChoices[Math.floor(Math.random() * emojiChoices.length)];
+                    }, 150);
+
+                    let countdown = 3;
+                    resultMessage.textContent = countdown;
+                    countdownInterval = setInterval(() => {
+                        countdown--;
+                        if (countdown > 0) {
+                            resultMessage.textContent = countdown;
+                        } else if (countdown === 0) {
+                            resultMessage.textContent = "GO!";
+                            playSoundEffect(goSound);
+                        } else {
+                            clearInterval(countdownInterval);
+                            countdownInterval = null;
+                            playRound();
+                        }
+                    }, 1000);
+                }
+
+                function playRound() {
+                    if (computerAnimationInterval) clearInterval(computerAnimationInterval); // Stop animation
+                    isRoundActive = false;
+                    
+                    let playerChoice = lastPlayerChoice; // Use 'let' for potential modification
+                    const computerChoice = choices[Math.floor(Math.random() * choices.length)];
+                    
+                    // --- RPS Twist Implementation ---
+                    let twistMessage = '';
+                    if (playerChoice === 'Paper') {
+                        playerChoice = 'Scissors';
+                        twistMessage = 'Twist! Your Paper was interpreted as Scissors!';
+                    } else if (playerChoice === 'Scissors') {
+                        playerChoice = 'Paper';
+                        twistMessage = 'Twist! Your Scissors was interpreted as Paper!';
+                    }
+                    // Rock remains Rock
+                    // --- End RPS Twist ---
+
+                    playerChoiceDisplay.textContent = handIcons[lastPlayerChoice] || '?'; // Show actual hand gesture
+                    computerChoiceDisplay.textContent = handIcons[computerChoice];
+                    
+                    if (lastPlayerChoice === 'No Hand') { // Use lastPlayerChoice for "No Hand" check
+                        resultMessage.textContent = "No Hand Detected!";
+                        playSoundEffect(tieSound); // Treat as a tie/neutral sound
+                    } else {
+                        // Use the twisted playerChoice for game logic
+                        const result = getWinner(playerChoice, computerChoice); 
+                        if (result === 'win') {
+                            resultMessage.textContent = twistMessage || 'You Win!'; // Use twist message if applied
+                            playerScore++;
+                            playSoundEffect(winSound);
+                        } else if (result === 'lose') {
+                            resultMessage.textContent = twistMessage || 'Computer Wins!';
+                            computerScore++;
+                            playSoundEffect(loseSound);
+                        } else {
+                            resultMessage.textContent = twistMessage || "It's a Tie!";
+                            playSoundEffect(tieSound);
+                        }
+                    }
+                    
+                    playerScoreSpan.textContent = playerScore;
+                    computerScoreSpan.textContent = computerScore;
+                    roundCount++;
+                    roundCounterSpan.textContent = roundCount;
+
+                    if (roundCount >= MAX_ROUNDS) {
+                        announceGameWinner();
+                    } else {
+                        startButton.disabled = false;
+                        resetButton.disabled = false;
+                    }
+                }
+
+                function getWinner(player, computer) {
+                    if (player === computer) return 'tie';
+                    if ((player === 'Rock' && computer === 'Scissors') || (player === 'Paper' && computer === 'Rock') || (player === 'Scissors' && computer === 'Paper')) return 'win';
+                    return 'lose';
+                }
+
+                function announceGameWinner() {
+                    startButton.disabled = true;
+                    resetButton.disabled = false;
+                    let finalMessage;
+                    if (playerScore > computerScore) finalMessage = `You win the game ${playerScore} to ${computerScore}!`;
+                    else if (computerScore > playerScore) finalMessage = `Computer wins ${computerScore} to ${playerScore}!`;
+                    else finalMessage = `It's a tie! ${playerScore} to ${playerScore}.`;
+                    resultMessage.textContent = finalMessage;
+                }
+
+                function resetGame() {
+                    if (countdownInterval) clearInterval(countdownInterval);
+                    if (computerAnimationInterval) clearInterval(computerAnimationInterval);
+                    isRoundActive = false;
+                    playerScore = 0; computerScore = 0; roundCount = 0;
+                    playerScoreSpan.textContent = playerScore;
+                    computerScoreSpan.textContent = computerScore;
+                    roundCounterSpan.textContent = roundCount;
+                    playerChoiceDisplay.textContent = '?';
+                    computerChoiceDisplay.textContent = '?';
+                    resultMessage.textContent = 'Press START or click/tap the game area!';
+                    startButton.disabled = false;
+                    resetButton.disabled = true;
+                }
+
+                async function initialize() {
+                    try {
+                        loadingOverlay.style.display = 'flex';
+                        videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                        webcamElement.srcObject = videoStream;
+                        await new Promise((resolve) => { webcamElement.onloadedmetadata = resolve; });
+                        webcamElement.play();
+                        const model = handPoseDetection.SupportedModels.MediaPipeHands;
+                        const detectorConfig = { runtime: 'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands', modelType: 'lite' };
+                        detector = await handPoseDetection.createDetector(model, detectorConfig);
+                        loadingOverlay.style.display = 'none';
+                        detectHand();
+
+                        // Event listeners for starting the game
+                        startButton.addEventListener('click', startRound);
+                        rpsGameContainer.addEventListener('click', () => { // Click on game area
+                            if (!isRoundActive && roundCount < MAX_ROUNDS) {
+                                startRound();
+                            } else if (roundCount >= MAX_ROUNDS) { // If game is over, reset and start
+                                resetGame();
+                                startRound();
+                            }
+                        });
+                        document.addEventListener('keydown', (event) => {
+                            if (activeGameId === 'rock-paper-scissors' && (event.code === 'Space' || event.code === 'Enter')) {
+                                if (!isRoundActive && roundCount < MAX_ROUNDS) {
+                                    startRound();
+                                } else if (roundCount >= MAX_ROUNDS) {
+                                    resetGame();
+                                    startRound();
+                                }
+                                event.preventDefault();
+                            }
+                        });
+                        resetButton.addEventListener('click', resetGame);
+                    } catch (error) {
+                        console.error("Error initializing RPS:", error);
+                        loadingOverlay.innerHTML = `<div>Error: ${error.message}</div>`;
+                    }
+                }
+                initialize();
+            }
+
+            // --- Tic Tac Toe Game Logic ---
+            function initTicTacToe() {
+                const tttGameContainer = document.getElementById('tttGameContainer'); // Get the container
+                const statusDisplay = document.getElementById('tic-tac-toe-status');
+                const resetButton = document.getElementById('tic-tac-toe-reset-button');
+                const cells = document.querySelectorAll('.tic-tac-toe-cell');
+                let gameActive = true, currentPlayer = "X", boardState = Array(9).fill("");
+                let clickCount = 0, swapTriggerCount = Math.floor(Math.random() * 4) + 3;
+                const winningConditions = [ [0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6] ];
+                const playerXTurn = () => `Player X's Turn`, playerOTurn = () => `Player O's Turn`;
+                const winningMessage = (player) => `Player ${player} has won!`, drawMessage = () => `Game ended in a draw!`;
+                statusDisplay.innerHTML = `Press START or click/tap the game area!`; // Initial status message
+                
+                function handleCellPlayed(cell, index) {
+                    // If currentPlayer is 'X', they place 'O'. If 'O', they place 'X'.
+                    const symbolToPlace = currentPlayer === "X" ? "O" : "X";
+                    boardState[index] = symbolToPlace;
+                    cell.innerHTML = symbolToPlace;
+                    cell.classList.add(symbolToPlace.toLowerCase());
+                }
+                
+                function handlePlayerChange() {
+                    currentPlayer = currentPlayer === "X" ? "O" : "X";
+                    statusDisplay.innerHTML = currentPlayer === "X" ? playerXTurn() : playerOTurn();
+                }
+                
+                function handleResultValidation() {
+                    let roundWon = false;
+                    let winningSymbol = ''; // Store the symbol that won
+                    for (const condition of winningConditions) {
+                        let [a, b, c] = [boardState[condition[0]], boardState[condition[1]], boardState[condition[2]]];
+                        if (a && a === b && b === c) {
+                            roundWon = true;
+                            winningSymbol = a; // The symbol that won
+                            break;
+                        }
+                    }
+                    if (roundWon) {
+                        let actualWinnerPlayer = '';
+                        // Twist: If 'O' formed the triplet (placed by Player X), then Player O wins.
+                        if (winningSymbol === 'O') {
+                            actualWinnerPlayer = 'O'; 
+                        }
+                        // Twist: If 'X' formed the triplet (placed by Player O), then Player X wins.
+                        else if (winningSymbol === 'X') {
+                            actualWinnerPlayer = 'X'; 
+                        }
+                        statusDisplay.innerHTML = winningMessage(actualWinnerPlayer);
+                        gameActive = false; return;
+                    }
+                    if (!boardState.includes("")) { statusDisplay.innerHTML = drawMessage(); gameActive = false; }
+                }
+
+                function swapBoard() {
+                    boardState = boardState.map(cell => (cell === 'X' ? 'O' : (cell === 'O' ? 'X' : '')));
+                    cells.forEach((cell, index) => {
+                        cell.innerHTML = boardState[index];
+                        cell.classList.remove('x', 'o');
+                        if (boardState[index]) cell.classList.add(boardState[index].toLowerCase());
+                    });
+                    statusDisplay.innerHTML = "Board Swapped!";
+                    // The currentPlayer does NOT change here, only the board state visually flips.
+                    // The next turn is still for the same 'currentPlayer' but they will place the *other* symbol.
+                    setTimeout(() => {
+                        statusDisplay.innerHTML = currentPlayer === "X" ? playerXTurn() : playerOTurn();
+                        handleResultValidation(); // Re-validate in case swap creates a win
+                    }, 1500);
+                }
+                
+                function handleCellClick(e) {
+                    if (!gameActive) { // If game is not active, treat click as a start/reset
+                        handleResetGame();
+                        return;
+                    }
+                    const cell = e.target, index = parseInt(cell.dataset.cellIndex);
+                    if (boardState[index] !== "") return; // Only allow clicks on empty cells
+                    
+                    handleCellPlayed(cell, index);
+                    handleResultValidation();
+                    
+                    if(gameActive) {
+                        handlePlayerChange();
+                        clickCount++;
+                        if (clickCount === swapTriggerCount) {
+                            swapBoard();
+                            clickCount = 0;
+                            swapTriggerCount = Math.floor(Math.random() * 4) + 3;
+                        }
+                    }
+                }
+                
+                function handleResetGame() {
+                    gameActive = true; currentPlayer = "X"; boardState.fill("");
+                    statusDisplay.innerHTML = playerXTurn();
+                    cells.forEach(cell => { cell.innerHTML = ""; cell.classList.remove('x', 'o'); });
+                    clickCount = 0; swapTriggerCount = Math.floor(Math.random() * 4) + 3;
+                }
+                
+                cells.forEach(cell => cell.addEventListener('click', handleCellClick));
+                resetButton.addEventListener('click', handleResetGame);
+
+                // Event listeners for starting the game via keyboard
+                document.addEventListener('keydown', (event) => {
+                    if (activeGameId === 'tic-tac-toe' && (event.code === 'Space' || event.code === 'Enter')) {
+                        if (!gameActive) { // If game is not active, reset and start
+                            handleResetGame();
+                        }
+                        event.preventDefault(); // Prevent default action (e.g., scrolling with spacebar)
+                    }
+                });
+            }
+
+            // --- Flappy Bird Game Logic ---
+            function initFlappyBird() {
+                const canvas = document.getElementById('flappyBirdCanvas');
+                const ctx = canvas.getContext('2d');
+                const webcamElement = document.getElementById('webcamFlappyBird');
+                const loadingOverlay = document.getElementById('loadingOverlayFlappyBird');
+                const scoreDisplay = document.getElementById('flappyBirdScore');
+                const statusDisplay = document.getElementById('flappyBirdStatus');
+                const startButton = document.getElementById('flappyBirdStartButton');
+                const resetButton = document.getElementById('flappyBirdResetButton');
+
+                let detector = null;
+                let videoStream = null;
+                let animationFrameId = null; // To store requestAnimationFrame ID
+                let flipInterval = null; // To store setInterval ID for control flip
+
+                // Game state variables
+                const bird = {
+                    x: 50,
+                    y: canvas.height / 2, // Initial position
+                    radius: 15, // Used for collision detection (approximate for emoji)
+                    emoji: '🐦', // Bird emoji
+                    fontSize: 30 // Font size for the emoji
+                };
+
+                let pipes = [];
+                const pipeWidth = 50;
+                const pipeGap = 150; // Vertical gap between top and bottom pipes
+                const pipeSpeed = 2;
+                let score = 0;
+                let gameRunning = false;
+                let gameOver = false;
+
+                // Control inversion state:
+                // false = Hand Up -> Bird Down (inverted control)
+                // true = Hand Up -> Bird Up (direct control)
+                let controlInverted = false; 
+                const FLIP_INTERVAL_TIME = 7000; // milliseconds (e.g., every 7 seconds)
+
+                // --- Cleanup function for Flappy Bird ---
+                window.stopFlappyBird = () => {
+                    if (videoStream) videoStream.getTracks().forEach(track => track.stop());
+                    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                    if (flipInterval) clearInterval(flipInterval); // Clear the flip interval
+                    if (detector) {
+                        detector.dispose(); // Dispose the model
+                        detector = null;
+                    }
+                    console.log("Flappy Bird resources released.");
+                };
+
+                // --- Drawing Functions ---
+                function drawBird() {
+                    ctx.font = `${bird.fontSize}px Arial`; // Set font for emoji
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(bird.emoji, bird.x, bird.y);
+                }
+
+                function drawPipes() {
+                    ctx.fillStyle = '#228B22'; // Forest Green
+                    ctx.strokeStyle = '#006400'; // Dark Green
+                    ctx.lineWidth = 3;
+                    pipes.forEach(p => {
+                        // Top pipe
+                        ctx.fillRect(p.x, 0, pipeWidth, p.y);
+                        ctx.strokeRect(p.x, 0, pipeWidth, p.y);
+                        // Bottom pipe
+                        ctx.fillRect(p.x, p.y + pipeGap, pipeWidth, canvas.height - (p.y + pipeGap));
+                        ctx.strokeRect(p.x, p.y + pipeGap, pipeWidth, canvas.height - (p.y + pipeGap));
+                    });
+                }
+
+                function drawScore() {
+                    scoreDisplay.textContent = `Score: ${score}`;
+                }
+
+                function drawStatus(message) {
+                    statusDisplay.textContent = message;
+                }
+
+                // --- Game Logic Functions ---
+                function update() {
+                    if (!gameRunning) return;
+
+                    // Bird's Y position is now directly controlled by hand tracking,
+                    // so no gravity or velocity physics updates here.
+                    // Keep bird within canvas bounds
+                    bird.y = Math.max(bird.radius, Math.min(canvas.height - bird.radius, bird.y));
+
+
+                    // Update pipes
+                    for (let i = 0; i < pipes.length; i++) {
+                        let p = pipes[i];
+                        p.x -= pipeSpeed;
+
+                        // Collision detection with pipes (game over)
+                        if (
+                            bird.x + bird.radius > p.x &&
+                            bird.x - bird.radius < p.x + pipeWidth &&
+                            (bird.y - bird.radius < p.y || bird.y + bird.radius > p.y + pipeGap)
+                        ) {
+                            endGame(); // This remains the only game over condition
+                            return;
+                        }
+
+                        // Score increment
+                        if (p.x + pipeWidth < bird.x && !p.scored) {
+                            score++;
+                            p.scored = true;
+                            drawScore();
+                        }
+                    }
+
+                    // Remove off-screen pipes
+                    pipes = pipes.filter(p => p.x + pipeWidth > 0);
+
+                    // Add new pipes
+                    if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 200) {
+                        const minPipeY = 100;
+                        const maxPipeY = canvas.height - pipeGap - 100;
+                        const randomY = Math.floor(Math.random() * (maxPipeY - minPipeY + 1)) + minPipeY;
+                        pipes.push({
+                            x: canvas.width,
+                            y: randomY,
+                            scored: false
+                        });
+                    }
+                }
+
+                function render() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+                    drawPipes();
+                    drawBird();
+                }
+
+                function gameLoop() {
+                    update();
+                    render();
+                    if (gameRunning) {
+                        animationFrameId = requestAnimationFrame(gameLoop);
+                    }
+                }
+
+                function toggleControlOrientation() {
+                    controlInverted = !controlInverted; // Perform the actual flip
+                    if (controlInverted) {
+                        drawStatus("Controls: Direct (Hand Up = Bird Up)");
+                    } else {
+                        drawStatus("Controls: Inverted (Hand Up = Bird Down)");
+                    }
+                }
+
+                function startGame() {
+                    if (gameRunning || gameOver) {
+                        resetGame();
+                    }
+                    gameRunning = true;
+                    gameOver = false;
+                    startButton.disabled = true;
+                    resetButton.disabled = false;
+                    
+                    // Initialize control state and start flip interval
+                    controlInverted = false; // Start with inverted control
+                    drawStatus("Controls: Inverted (Hand Up = Bird Down)");
+                    
+                    // Clear any previous interval before starting a new one
+                    if (flipInterval) clearInterval(flipInterval);
+                    flipInterval = setInterval(toggleControlOrientation, FLIP_INTERVAL_TIME);
+
+                    gameLoop();
+                }
+
+                function endGame() {
+                    gameRunning = false;
+                    gameOver = true;
+                    startButton.disabled = false;
+                    resetButton.disabled = false;
+                    drawStatus(`Game Over! Final Score: ${score}`);
+                    console.log("Game Over!");
+                    if (flipInterval) clearInterval(flipInterval); // Stop the flip interval
+                    flipInterval = null;
+                }
+
+                function resetGame() {
+                    bird.y = canvas.height / 2;
+                    pipes = [];
+                    score = 0;
+                    drawScore();
+                    drawStatus("Press START or click/tap the game area!");
+                    startButton.disabled = false;
+                    resetButton.disabled = true;
+                    render(); // Draw initial state
+                    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                    if (flipInterval) clearInterval(flipInterval); // Stop the flip interval
+                    flipInterval = null;
+                    controlInverted = false; // Reset control to default
+                }
+
+                // --- Hand Pose Detection for Flappy Bird Control ---
+                async function detectHandForFlappyBird() {
+                    if (!videoStream || !videoStream.active) return;
+                    if (detector) {
+                        const hands = await detector.estimateHands(webcamElement, {flipHorizontal: true});
+                        if (gameRunning && !gameOver && hands.length > 0) { 
+                            // Use the wrist (landmark 0) for vertical position
+                            const currentWristY = hands[0].keypoints[0].y;
+                            
+                            // Normalize hand Y position from webcam feed (0=top, 1=bottom)
+                            const normalizedY = currentWristY / webcamElement.videoHeight; 
+
+                            let targetY;
+                            if (controlInverted) {
+                                // Direct control: Hand up (low normalizedY) -> Bird up (low targetY)
+                                targetY = normalizedY * canvas.height;
+                            } else {
+                                // Inverted control: Hand up (low normalizedY) -> Bird down (high targetY)
+                                targetY = (1 - normalizedY) * canvas.height;
+                            }
+
+                            // Smoothly move the bird towards the target Y for better responsiveness
+                            const smoothingFactor = 0.5; // Adjust for more/less smoothness (0.1 is smooth, 1.0 is immediate)
+                            bird.y = bird.y + (targetY - bird.y) * smoothingFactor;
+                            
+                            // Clamp bird position within canvas bounds (handled by update, but good to ensure here too)
+                            bird.y = Math.max(bird.radius, Math.min(canvas.height - bird.radius, bird.y));
+                            
+                        }
+                    }
+                    requestAnimationFrame(detectHandForFlappyBird);
+                }
+
+                // --- Initialization ---
+                async function initializeFlappyBird() {
+                    try {
+                        loadingOverlay.style.display = 'flex';
+                        videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                        webcamElement.srcObject = videoStream;
+                        await new Promise((resolve) => { webcamElement.onloadedmetadata = resolve; });
+                        webcamElement.play();
+                        
+                        const model = handPoseDetection.SupportedModels.MediaPipeHands;
+                        const detectorConfig = { runtime: 'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands', modelType: 'lite' };
+                        detector = await handPoseDetection.createDetector(model, detectorConfig);
+                        
+                        loadingOverlay.style.display = 'none';
+                        drawScore(); // Initialize score display
+                        render(); // Draw initial empty game state
+                        detectHandForFlappyBird(); // Start continuous hand detection
+
+                        // Event listeners for starting the game
+                        startButton.addEventListener('click', startGame);
+                        canvas.addEventListener('click', startGame); // Start game on canvas click/tap
+                        document.addEventListener('keydown', (event) => {
+                            if (activeGameId === 'flappy-bird' && (event.code === 'Space' || event.code === 'Enter')) {
+                                if (!gameRunning && !gameOver) { // Only start if not already running or over
+                                    startGame();
+                                } else if (gameOver) { // If game is over, reset and start
+                                    resetGame();
+                                    startGame();
+                                }
+                                event.preventDefault(); // Prevent default action (e.g., scrolling with spacebar)
+                            }
+                        });
+                        resetButton.addEventListener('click', resetGame);
+
+                    } catch (error) {
+                        console.error("Error initializing Flappy Bird:", error);
+                        loadingOverlay.innerHTML = `<div>Error: ${error.message}<br>Please ensure webcam access is granted.</div>`;
+                        startButton.disabled = true; // Disable buttons on error
+                    }
+                }
+                initializeFlappyBird();
+            }
+        });
+    </script>
+</body>
+</html>
